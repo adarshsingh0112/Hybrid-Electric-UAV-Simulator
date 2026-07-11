@@ -1,0 +1,12 @@
+{
+    "engine_name": "Hybrid Gas Turbine",
+    "engine_type": "Turboshaft",
+    "maximum_power_kw": 300,
+    "idle_power_kw": 40,
+    "fuel_type": "Jet A-1",
+    "fuel_capacity_kg": 250,
+    "specific_fuel_consumption_kg_per_kwh": 0.18,
+    "maximum_rpm": 45000,
+    "generator_efficiency": 0.93,
+    "weight_kg": 110
+}

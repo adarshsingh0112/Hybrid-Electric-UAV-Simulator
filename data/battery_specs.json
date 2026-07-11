@@ -1,0 +1,25 @@
+{
+    "battery_type": "Lithium-Ion",
+
+    "capacity_kwh": 220,
+
+    "nominal_voltage_v": 800,
+
+    "maximum_power_kw": 250,
+
+    "charging_efficiency": 0.95,
+
+    "discharging_efficiency": 0.96,
+
+    "minimum_state_of_charge_percent": 20,
+
+    "maximum_state_of_charge_percent": 100,
+
+    "initial_state_of_charge_percent": 100,
+
+    "maximum_temperature_c": 60,
+
+    "weight_kg": 520,
+
+    "cycle_life": 3000
+}

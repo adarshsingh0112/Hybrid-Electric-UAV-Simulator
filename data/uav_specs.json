@@ -1,0 +1,45 @@
+{
+    "uav_name": "Hybrid Electric Fixed Wing UAV",
+
+    "manufacturer": "Project Team",
+
+    "maximum_takeoff_weight_kg": 1000,
+
+    "empty_weight_kg": 650,
+
+    "payload_weight_kg": 200,
+
+    "fuel_capacity_kg": 250,
+
+    "battery_capacity_kwh": 220,
+
+    "battery_voltage_v": 800,
+
+    "battery_max_power_kw": 250,
+
+    "engine_power_kw": 300,
+
+    "generator_efficiency": 0.93,
+
+    "motor_efficiency": 0.95,
+
+    "cruise_speed_kmph": 250,
+
+    "maximum_speed_kmph": 320,
+
+    "stall_speed_kmph": 85,
+
+    "service_ceiling_m": 10000,
+
+    "cruise_altitude_m": 5000,
+
+    "maximum_range_km": 1200,
+
+    "target_endurance_hr": 8,
+
+    "wing_span_m": 16,
+
+    "wing_area_sq_m": 22,
+
+    "lift_to_drag_ratio": 18
+}

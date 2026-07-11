@@ -1,0 +1,55 @@
+{
+    "mission_name": "Standard Surveillance Mission",
+
+    "phases": [
+
+        {
+            "name": "Takeoff",
+            "duration_min": 5,
+            "target_speed_kmph": 120,
+            "target_altitude_m": 300,
+            "power_requirement_percent": 100
+        },
+
+        {
+            "name": "Climb",
+            "duration_min": 15,
+            "target_speed_kmph": 180,
+            "target_altitude_m": 5000,
+            "power_requirement_percent": 90
+        },
+
+        {
+            "name": "Cruise",
+            "duration_min": 180,
+            "target_speed_kmph": 250,
+            "target_altitude_m": 5000,
+            "power_requirement_percent": 65
+        },
+
+        {
+            "name": "Loiter",
+            "duration_min": 120,
+            "target_speed_kmph": 170,
+            "target_altitude_m": 5000,
+            "power_requirement_percent": 45
+        },
+
+        {
+            "name": "Descent",
+            "duration_min": 20,
+            "target_speed_kmph": 180,
+            "target_altitude_m": 300,
+            "power_requirement_percent": 30
+        },
+
+        {
+            "name": "Landing",
+            "duration_min": 10,
+            "target_speed_kmph": 100,
+            "target_altitude_m": 0,
+            "power_requirement_percent": 20
+        }
+
+    ]
+}
