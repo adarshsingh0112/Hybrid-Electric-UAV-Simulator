@@ -26,11 +26,11 @@ def check_configuration():
             with open(DATA_DIR / file_name, "r") as f:
                 json.load(f)
 
-            print(f"✔ Loaded: {file_name}")
+            print(f"[OK] Loaded: {file_name}")
 
         except Exception as e:
             all_loaded = False
-            print(f"❌ Error loading {file_name}")
+            print(f"[ERROR] Error loading {file_name}")
             print(e)
 
     print("=" * 60)
@@ -41,10 +41,10 @@ def check_configuration():
 def main():
 
     if not check_configuration():
-        print("\n❌ Simulator cannot start due to configuration errors.")
+        print("\n[ERROR] Simulator cannot start due to configuration errors.")
         return
 
-    print("\n🚀 Starting Hybrid UAV...\n")
+    print("\n[START] Starting Hybrid UAV...\n")
 
     # Create UAV
     uav = HybridUAV()
@@ -55,7 +55,7 @@ def main():
     # Execute the complete mission
     uav.fly()
 
-    print("\n✅ Simulation Finished Successfully.")
+    print("\n[DONE] Simulation Finished Successfully.")
 
 
 if __name__ == "__main__":

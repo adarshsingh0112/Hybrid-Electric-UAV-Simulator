@@ -3,9 +3,12 @@ from scipy.optimize import minimize
 
 class EnergyOptimizer:
 
-    def __init__(self):
+    def __init__(self, generator_efficiency=0.93, engine_idle_power=40.0, engine_max_power=300.0):
 
         self.minimum_soc = 20
+        self.generator_efficiency = generator_efficiency
+        self.engine_idle_power = engine_idle_power
+        self.engine_max_power = engine_max_power
 
     # -------------------------------------------------
 
@@ -17,7 +20,7 @@ class EnergyOptimizer:
         mission_phase
     ):
 
-        # Engine contribution for each mission phase
+        # Engine contribution for each mission phase (electrical ratio)
         phase_ratio = {
 
             "Takeoff": 0.70,
@@ -54,35 +57,42 @@ class EnergyOptimizer:
 
             target_ratio = max(target_ratio, 0.60)
 
-        target_engine = target_ratio * required_power
+        if fuel_remaining <= 0:
+            return 0.0, required_power
+
+        target_engine_elec = target_ratio * required_power
+        target_engine_mech = min(
+            self.engine_max_power,
+            max(self.engine_idle_power, target_engine_elec / self.generator_efficiency)
+        )
 
         # -------------------------------------------------
 
         def objective(x):
 
-            engine_power = x[0]
-            battery_power = x[1]
+            engine_mech = x[0]
+            battery_elec = x[1]
 
-            # Fuel cost
-            fuel_cost = engine_power * 0.05
+            # Fuel cost based on engine mechanical power
+            fuel_cost = engine_mech * 0.05
 
-            # Heavy penalty on battery usage
-            battery_cost = battery_power * 0.12
+            # Penalty on battery usage
+            battery_cost = battery_elec * 0.12
 
             # Battery protection
             if battery_soc < 80:
-                battery_cost += battery_power * 0.10
+                battery_cost += battery_elec * 0.10
 
             if battery_soc < 60:
-                battery_cost += battery_power * 0.15
+                battery_cost += battery_elec * 0.15
 
             if battery_soc < 40:
-                battery_cost += battery_power * 0.25
+                battery_cost += battery_elec * 0.25
 
             # Keep engine near desired target
             balance_cost = (
-                (engine_power - target_engine)
-                / required_power
+                (engine_mech - target_engine_mech)
+                / max(1.0, required_power)
             ) ** 2
 
             return (
@@ -104,7 +114,7 @@ class EnergyOptimizer:
                 "type": "eq",
 
                 "fun": lambda x:
-                x[0] + x[1] - required_power
+                (x[0] * self.generator_efficiency) + x[1] - required_power
 
             }
 
@@ -112,17 +122,17 @@ class EnergyOptimizer:
 
         bounds = [
 
-            (0, required_power),
+            (self.engine_idle_power, self.engine_max_power),
 
-            (0, required_power)
+            (0, max(0.0, required_power))
 
         ]
 
         initial_guess = [
 
-            target_engine,
+            target_engine_mech,
 
-            required_power - target_engine
+            max(0.0, required_power - (target_engine_mech * self.generator_efficiency))
 
         ]
 
@@ -140,8 +150,11 @@ class EnergyOptimizer:
 
         )
 
-        engine_power = round(result.x[0], 2)
+        if result.success:
+            engine_mech = round(float(result.x[0]), 2)
+            battery_elec = round(float(result.x[1]), 2)
+        else:
+            engine_mech = round(target_engine_mech, 2)
+            battery_elec = round(max(0.0, required_power - (engine_mech * self.generator_efficiency)), 2)
 
-        battery_power = round(result.x[1], 2)
-
-        return engine_power, battery_power
+        return engine_mech, battery_elec

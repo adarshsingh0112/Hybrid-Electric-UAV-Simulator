@@ -25,7 +25,8 @@ class HybridUAV:
         )
         self.simulator = MissionSimulator(
             self.mission,
-            self.power_manager
+            self.power_manager,
+            aircraft=self.aircraft
         )
 
     def initialize(self):

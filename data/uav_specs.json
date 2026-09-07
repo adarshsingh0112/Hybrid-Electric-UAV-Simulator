@@ -11,6 +11,8 @@
 
     "fuel_capacity_kg": 250,
 
+    "battery_weight_kg": 520,
+
     "battery_capacity_kwh": 220,
 
     "battery_voltage_v": 800,
@@ -22,6 +24,8 @@
     "generator_efficiency": 0.93,
 
     "motor_efficiency": 0.95,
+
+    "propeller_efficiency": 0.85,
 
     "cruise_speed_kmph": 250,
 
@@ -40,6 +44,12 @@
     "wing_span_m": 16,
 
     "wing_area_sq_m": 22,
+
+    "oswald_efficiency": 0.82,
+
+    "cd0": 0.025,
+
+    "cl_max": 1.5,
 
     "lift_to_drag_ratio": 18
 }
