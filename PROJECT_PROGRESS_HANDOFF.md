@@ -231,6 +231,15 @@ The goal of the system is to maintain a synchronized, physics-grounded, and vali
   - `tests/test_mission_rerouting_integration.py` & root proxy: 2/2 test suite (100% PASS).
   - `docs/STEP10_CLOSED_LOOP_MISSION_REROUTING.md`: Step 10 comprehensive engineering dossier.
 - **Verification Scripts**: `test_mission_rerouting_manager.py` (6/6 PASS), `test_operator_confirmation.py` (7/7 PASS), `test_mission_rerouting_api.py` (6/6 PASS), `test_mission_rerouting_integration.py` (2/2 PASS).
+- **Git Commit Information**:
+  - **Commit Hash**: `396615a`
+  - **Commit Message**: `feat: add closed-loop mission rerouting and GCS pilot confirmation (Step 10)`
+  - **Target Remote**: `https://github.com/adarshsingh0112/Hybrid-Electric-UAV-Simulator.git`
+  - **Pushed Branch**: `step10-closed-loop-rerouting` (PR: `https://github.com/adarshsingh0112/Hybrid-Electric-UAV-Simulator/pull/new/step10-closed-loop-rerouting`)
+  - **Main Branch Status**: Remote `origin/main` diverged from local `main` due to separate historical root commits. Direct fast-forward push to `main` prevented to avoid rewriting Git history without explicit operator authorization.
+- **Known Limitations & Constraints**:
+  - Engineering simulation prototype only: No physical aircraft autopilot hardware actuation or RF datalink command transmission.
+  - Active route mutations require explicit pilot authorization; no autonomous route execution without human confirmation.
 
 ---
 
