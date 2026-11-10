@@ -1,0 +1,16 @@
+{
+  "powertrain_name": "DRDO-MALE-UAV-Parallel-Hybrid-Powertrain",
+  "max_electric_motor_power_w": 40000.0,
+  "max_generator_power_w": 30000.0,
+  "motor_efficiency": 0.94,
+  "generator_efficiency": 0.92,
+  "inverter_efficiency": 0.97,
+  "electric_machine_thermal_capacity_j_per_k": 18000.0,
+  "electric_machine_cooling_coeff_w_per_k": 15.0,
+  "max_electric_machine_temp_c": 110.0,
+  "engine_idle_throttle_pct": 15.0,
+  "engine_max_continuous_throttle_pct": 95.0,
+  "auto_mode_soc_low_threshold_pct": 20.0,
+  "auto_mode_soc_high_threshold_pct": 80.0,
+  "auto_mode_high_power_threshold_w": 130000.0
+}

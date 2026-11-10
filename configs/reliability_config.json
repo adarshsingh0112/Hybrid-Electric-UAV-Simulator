@@ -1,0 +1,37 @@
+{
+  "policy_name": "DRDO-MALE-UAV-Safety-Reserve-Policy-Standard",
+  "min_battery_reserve_pct": 20.0,
+  "min_fuel_reserve_liters": 18.0,
+  "emergency_power_reserve_w": 15000.0,
+  "rtb_energy_margin_factor": 1.20,
+  "nominal_fuel_capacity_liters": 150.0,
+  "uav_mass_kg": 1100.0,
+  "nominal_cruise_speed_mps": 55.0,
+  "cruise_lift_to_drag_ratio": 15.0,
+  "propeller_efficiency": 0.82,
+  "nominal_cruise_fuel_burn_lph": 22.0,
+  "max_fuel_burn_lph": 38.0,
+  "alternate_recovery_bases": [
+    {
+      "base_id": "ALT-01",
+      "name": "Baramati Civil Airfield",
+      "latitude_deg": 18.1517,
+      "longitude_deg": 74.5772,
+      "altitude_m": 570.0
+    },
+    {
+      "base_id": "ALT-02",
+      "name": "Solapur Regional Airport",
+      "latitude_deg": 17.6599,
+      "longitude_deg": 75.9064,
+      "altitude_m": 483.0
+    },
+    {
+      "base_id": "ALT-03",
+      "name": "Ahmednagar Air Force Station",
+      "latitude_deg": 19.0952,
+      "longitude_deg": 74.7480,
+      "altitude_m": 650.0
+    }
+  ]
+}

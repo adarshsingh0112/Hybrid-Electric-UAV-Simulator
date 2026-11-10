@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 # Ensure project root is in path
@@ -29,6 +29,8 @@ from simulation.flight_profile import FlightProfile, FlightState
 from simulation.mvem import MeanValueEngineModel, EngineState
 from simulation.sensors import SensorModel, SensorReadings
 from simulation.fault_injector import FaultInjector, FaultType, FaultConfig
+from simulation.hybrid_powertrain import HybridPowertrain, HybridOperatingMode
+from digital_twin.uav_digital_twin import UAVDigitalTwin
 from digital_twin.health_index import HealthIndexEngine
 from digital_twin.ekf_estimator import ExtendedKalmanFilter
 from digital_twin.twin_state import DigitalTwinState, SubsystemHealth, AIHealthState, StateLevel
@@ -59,6 +61,10 @@ class EngineTwinRuntime:
         self.sensor_validator = SensorValidator()
         self.rul_engine = RULEstimator()
 
+        self.hybrid_powertrain = HybridPowertrain(engine=self.mvem_physical)
+        self.uav_digital_twin = UAVDigitalTwin()
+        self.mode_override: Optional[HybridOperatingMode] = None
+
         # Load AI Models
         models_dir = PROJECT_ROOT / "models" / "saved_models"
         ae_path = models_dir / "anomaly_autoencoder.pt"
@@ -86,6 +92,9 @@ class EngineTwinRuntime:
         self.injector = FaultInjector(self.mvem_physical, self.sensors)
         self.ekf = ExtendedKalmanFilter()
         self.rul_engine.reset()
+        self.hybrid_powertrain.reset()
+        self.uav_digital_twin.reset()
+        self.mode_override = None
         self.latest_alert = None
         self.active_fault_name = "HEALTHY"
 
@@ -198,6 +207,22 @@ class EngineTwinRuntime:
             recommended_action=alert.recommended_action if alert else "Continue nominal mission profile."
         )
 
+        # 13. Step Hybrid Powertrain & Unified UAV Digital Twin
+        prop_req_w = max(5000.0, (flight.throttle_pct / 100.0) * 85000.0)
+        hybrid_telemetry = self.hybrid_powertrain.update(
+            propulsion_power_request_w=prop_req_w,
+            flight_state=flight,
+            ambient_temp_c=flight.ambient_temp_c,
+            dt_s=dt_s,
+            mode_override=self.mode_override
+        )
+        uav_snapshot = self.uav_digital_twin.update_from_hybrid_telemetry(
+            hybrid_telemetry=hybrid_telemetry,
+            flight_state=flight,
+            engine_health_pct=subsystem_health.overall_health,
+            dt_s=dt_s
+        )
+
         state = DigitalTwinState(
             timestamp_s=round(t, 2),
             altitude_ft=round(flight.altitude_ft, 1),
@@ -237,6 +262,8 @@ class EngineTwinRuntime:
             residuals=residuals,
             health=subsystem_health,
             ai_prognostics=ai_health_state,
+            active_fault=self.active_fault_name,
+            uav_twin=uav_snapshot.to_dict(),
             provenance="SIMULATED"
         )
         self.latest_state = state
@@ -262,9 +289,26 @@ async def get_dashboard_root():
 
 @app.get("/api/state")
 async def get_current_state():
-    if twin_runtime.latest_state:
-        return twin_runtime.latest_state.to_dict()
-    return {"status": "initializing"}
+    if not twin_runtime.latest_state:
+        twin_runtime.step(dt_s=0.05)
+    payload = twin_runtime.latest_state.to_dict()
+    payload["active_alert"] = twin_runtime.latest_alert
+    payload["active_fault"] = twin_runtime.active_fault_name
+    return payload
+
+@app.get("/api/stream")
+async def sse_telemetry_stream():
+    """Server-Sent Events (SSE) telemetry stream for browser dashboard at 20 Hz."""
+    async def event_generator():
+        while True:
+            if twin_runtime.is_running:
+                state = twin_runtime.step(dt_s=0.05)
+                payload = state.to_dict()
+                payload["active_alert"] = twin_runtime.latest_alert
+                payload["active_fault"] = twin_runtime.active_fault_name
+                yield f"data: {json.dumps(payload)}\n\n"
+            await asyncio.sleep(0.05)
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @app.post("/api/fault/inject")
 async def inject_fault_endpoint(req: FaultInjectRequest):
@@ -294,15 +338,159 @@ async def clear_fault_endpoint():
     twin_runtime.active_fault_name = "HEALTHY"
     return {"status": "SUCCESS", "message": "Engine reset to healthy baseline."}
 
-@app.post("/api/sim/reset")
+@app.api_route("/api/sim/start", methods=["GET", "POST"])
+async def start_simulation_endpoint():
+    twin_runtime.is_running = True
+    return {"status": "SUCCESS", "is_running": True}
+
+@app.api_route("/api/sim/pause", methods=["GET", "POST"])
+async def pause_simulation_endpoint():
+    twin_runtime.is_running = False
+    return {"status": "SUCCESS", "is_running": False}
+
+@app.api_route("/api/sim/reset", methods=["GET", "POST"])
 async def reset_simulation_endpoint():
     twin_runtime.reset()
     return {"status": "SUCCESS", "message": "Simulation restarted."}
 
-@app.post("/api/sim/speed")
+@app.api_route("/api/sim/speed", methods=["GET", "POST"])
 async def set_simulation_speed(speed: float = 1.0):
     twin_runtime.time_scale = max(0.2, min(10.0, speed))
     return {"status": "SUCCESS", "time_scale": twin_runtime.time_scale}
+
+@app.api_route("/api/hybrid/mode", methods=["GET", "POST"])
+async def set_hybrid_mode_endpoint(mode: str = "AUTO"):
+    m = mode.upper()
+    if m in ["AUTO", "NONE"]:
+        twin_runtime.mode_override = None
+    else:
+        try:
+            twin_runtime.mode_override = HybridOperatingMode(m)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid hybrid mode: {mode}")
+    return {"status": "SUCCESS", "mode": mode}
+
+# -------------------------------------------------------------
+# STEP 10: Closed-Loop Mission Re-Routing & Confirmation Endpoints
+# -------------------------------------------------------------
+class OperatorApprovalRequest(BaseModel):
+    operator_id: str = "PILOT-GCS-01"
+
+class OperatorRejectionRequest(BaseModel):
+    operator_id: str = "PILOT-GCS-01"
+    reason: str = "Rejected by operator"
+
+@app.get("/api/mission/route")
+async def get_mission_route():
+    """Returns active route geometry, progress, and version."""
+    twin = twin_runtime.uav_digital_twin
+    nav = twin.navigation_engine
+    return {
+        "status": "SUCCESS",
+        "active_route_id": getattr(nav, "active_route_id", "ORIGINAL_MISSION_ROUTE"),
+        "original_route_id": getattr(nav, "original_route_id", "ORIGINAL_MISSION_ROUTE"),
+        "destination": getattr(nav.home_position, "name", "Pune Lohegaon (Home Base)") if nav.home_position else "Pune Lohegaon",
+        "current_position": nav.current_position.to_dict() if nav.current_position else None,
+        "current_waypoint_index": nav.current_waypoint_index,
+        "total_waypoints": len(nav.waypoints),
+        "waypoints": [wp.to_dict() for wp in nav.waypoints],
+        "completed_distance_m": nav.completed_route_distance_m,
+        "remaining_distance_m": nav.remaining_route_distance_m,
+        "total_distance_m": nav.total_planned_route_distance_m,
+        "mission_progress_pct": nav.mission_progress_pct,
+        "route_version": getattr(nav, "route_version", 1),
+        "route_history": getattr(nav, "route_history", []),
+        "provenance": "SIMULATED"
+    }
+
+@app.get("/api/mission/proposals")
+async def get_mission_proposals():
+    """Returns all route proposals generated during this session."""
+    rm = twin_runtime.uav_digital_twin.rerouting_manager
+    return {
+        "status": "SUCCESS",
+        "proposals": [p.to_dict() for p in rm.get_all_proposals()],
+        "pending_count": rm.get_pending_proposal_count(),
+        "provenance": "SIMULATED"
+    }
+
+@app.get("/api/mission/proposals/pending")
+async def get_pending_proposal():
+    """Returns the current active pending proposal requiring pilot review, if any."""
+    rm = twin_runtime.uav_digital_twin.rerouting_manager
+    prop = rm.get_pending_proposal()
+    return {
+        "status": "SUCCESS",
+        "has_pending": prop is not None,
+        "proposal": prop.to_dict() if prop else None,
+        "provenance": "SIMULATED"
+    }
+
+@app.post("/api/mission/proposals/{proposal_id}/approve")
+async def approve_mission_proposal(proposal_id: str, req: Optional[OperatorApprovalRequest] = None):
+    """Pilot confirmation endpoint: approves proposal and applies route update safely."""
+    op_id = req.operator_id if req else "PILOT-GCS-01"
+    twin = twin_runtime.uav_digital_twin
+    rm = twin.rerouting_manager
+    latest_state = twin.latest_state
+    
+    if latest_state is None:
+        twin_runtime.step(dt_s=0.05)
+        latest_state = twin.latest_state
+        
+    success, message, proposal = rm.approve_proposal(
+        proposal_id=proposal_id,
+        operator_id=op_id,
+        twin_state=latest_state,
+        navigation_engine=twin.navigation_engine
+    )
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+        
+    return {
+        "status": "SUCCESS",
+        "message": message,
+        "proposal": proposal.to_dict() if proposal else None,
+        "active_route_id": twin.navigation_engine.active_route_id,
+        "provenance": "SIMULATED"
+    }
+
+@app.post("/api/mission/proposals/{proposal_id}/reject")
+async def reject_mission_proposal(proposal_id: str, req: Optional[OperatorRejectionRequest] = None):
+    """Pilot rejection endpoint: rejects proposal and logs rejection reason."""
+    op_id = req.operator_id if req else "PILOT-GCS-01"
+    reason = req.reason if req else "Rejected by operator"
+    rm = twin_runtime.uav_digital_twin.rerouting_manager
+    latest_state = twin_runtime.uav_digital_twin.latest_state
+    timestamp_s = latest_state.timestamp_s if latest_state else twin_runtime.sim_time_s
+    
+    success, message, proposal = rm.reject_proposal(
+        proposal_id=proposal_id,
+        operator_id=op_id,
+        reason=reason,
+        timestamp_s=timestamp_s
+    )
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+        
+    return {
+        "status": "SUCCESS",
+        "message": message,
+        "proposal": proposal.to_dict() if proposal else None,
+        "provenance": "SIMULATED"
+    }
+
+@app.get("/api/mission/audit")
+async def get_mission_audit_trail():
+    """Returns immutable audit event trail."""
+    rm = twin_runtime.uav_digital_twin.rerouting_manager
+    return {
+        "status": "SUCCESS",
+        "audit_events": [e.to_dict() for e in rm.get_audit_events()],
+        "total_events": len(rm.get_audit_events()),
+        "provenance": "SIMULATED"
+    }
+
 
 # -------------------------------------------------------------
 # WebSocket Telemetry Stream (20 Hz Broadcast)

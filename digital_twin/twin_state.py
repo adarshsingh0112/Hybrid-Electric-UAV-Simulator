@@ -87,6 +87,7 @@ class DigitalTwinState:
     health: SubsystemHealth = field(default_factory=lambda: SubsystemHealth(100.0, [100.0]*4, 100.0, 100.0, 100.0, 100.0, 100.0))
     ai_prognostics: AIHealthState = field(default_factory=AIHealthState)
     active_fault: str = "HEALTHY"
+    uav_twin: Optional[Dict[str, Any]] = None
     provenance: str = "SIMULATED"
 
     def to_dict(self) -> Dict[str, Any]:

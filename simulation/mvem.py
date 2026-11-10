@@ -99,6 +99,23 @@ class MeanValueEngineModel:
         self.timing_jitter_deg = 0.0
         self.alternator_health = 1.0
 
+    def get_max_available_power_hp(self, altitude_ft: float) -> float:
+        """
+        Estimates maximum continuous engine mechanical power [HP] at a given altitude [ft],
+        accounting for VRDE 2.2L critical altitude turbocharger derating.
+        """
+        alt = max(0.0, float(altitude_ft))
+        if alt <= 10000.0:
+            return 200.0
+        elif alt <= 20000.0:
+            frac = (alt - 10000.0) / 10000.0
+            return 200.0 - (200.0 - 150.0) * frac
+        elif alt <= 30000.0:
+            frac = (alt - 20000.0) / 10000.0
+            return 150.0 - (150.0 - 110.0) * frac
+        else:
+            return 110.0
+
     def step(self, flight: FlightState, dt_s: float = 0.05) -> EngineState:
         """
         Integrates physics state forward by dt_s given current flight condition.

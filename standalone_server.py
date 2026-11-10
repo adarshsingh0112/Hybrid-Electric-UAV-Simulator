@@ -21,6 +21,8 @@ from simulation.flight_profile import FlightProfile, FlightState
 from simulation.mvem import MeanValueEngineModel, EngineState
 from simulation.sensors import SensorModel, SensorReadings
 from simulation.fault_injector import FaultInjector, FaultType, FaultConfig
+from simulation.hybrid_powertrain import HybridPowertrain, HybridOperatingMode
+from digital_twin.uav_digital_twin import UAVDigitalTwin
 from digital_twin.health_index import HealthIndexEngine
 from digital_twin.ekf_estimator import ExtendedKalmanFilter
 from digital_twin.twin_state import DigitalTwinState, SubsystemHealth, AIHealthState, StateLevel
@@ -44,6 +46,10 @@ class StandaloneEngineRuntime:
         self.health_engine = HealthIndexEngine()
         self.sensor_validator = SensorValidator()
         self.rul_engine = RULEstimator()
+
+        self.hybrid_powertrain = HybridPowertrain(engine=self.mvem_physical)
+        self.uav_digital_twin = UAVDigitalTwin()
+        self.mode_override: Optional[HybridOperatingMode] = None
 
         # AI Models
         models_dir = PROJECT_ROOT / "models" / "saved_models"
@@ -92,6 +98,9 @@ class StandaloneEngineRuntime:
             self.injector = FaultInjector(self.mvem_physical, self.sensors)
             self.ekf = ExtendedKalmanFilter()
             self.rul_engine.reset()
+            self.hybrid_powertrain.reset()
+            self.uav_digital_twin.reset()
+            self.mode_override = None
             self.latest_alert = None
             self.active_fault_name = "HEALTHY"
             self._warmup_thermal_equilibrium()
@@ -151,7 +160,6 @@ class StandaloneEngineRuntime:
             sensor_check = self.sensor_validator.validate(sensor_dict, mvem_dict, residuals)
 
             if sensor_check.is_sensor_fault:
-                # Decouple faulty sensor probe from mechanical health evaluation
                 mech_residuals = dict(residuals)
                 if sensor_check.faulty_channel:
                     mech_residuals[sensor_check.faulty_channel] = 0.0
@@ -205,6 +213,22 @@ class StandaloneEngineRuntime:
                 recommended_action=alert.recommended_action if alert else "Continue nominal mission profile."
             )
 
+            # Step Hybrid Powertrain & UAV Digital Twin
+            prop_req_w = max(5000.0, (flight.throttle_pct / 100.0) * 85000.0)
+            hybrid_telemetry = self.hybrid_powertrain.update(
+                propulsion_power_request_w=prop_req_w,
+                flight_state=flight,
+                ambient_temp_c=flight.ambient_temp_c,
+                dt_s=dt_s,
+                mode_override=self.mode_override
+            )
+            uav_snapshot = self.uav_digital_twin.update_from_hybrid_telemetry(
+                hybrid_telemetry=hybrid_telemetry,
+                flight_state=flight,
+                engine_health_pct=subsystem_health.overall_health,
+                dt_s=dt_s
+            )
+
             state = DigitalTwinState(
                 timestamp_s=round(t, 2),
                 altitude_ft=round(flight.altitude_ft, 1),
@@ -241,6 +265,7 @@ class StandaloneEngineRuntime:
                 health=subsystem_health,
                 ai_prognostics=ai_health_state,
                 active_fault=self.active_fault_name,
+                uav_twin=uav_snapshot.to_dict(),
                 provenance="SIMULATED"
             )
             self.latest_state = state
@@ -266,6 +291,7 @@ class DigitalTwinHTTPHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
+        q = parse_qs(parsed.query)
 
         if parsed.path == "/" or parsed.path == "/index.html":
             self.send_response(200)
@@ -303,6 +329,46 @@ class DigitalTwinHTTPHandler(SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps(payload).encode("utf-8"))
             else:
                 self.wfile.write(b'{"status":"initializing"}')
+            return
+
+        elif parsed.path == "/api/sim/start":
+            twin_runtime.is_running = True
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b'{"status":"SUCCESS","is_running":true}')
+            return
+
+        elif parsed.path == "/api/sim/pause":
+            twin_runtime.is_running = False
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b'{"status":"SUCCESS","is_running":false}')
+            return
+
+        elif parsed.path == "/api/sim/reset":
+            twin_runtime.reset()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b'{"status":"SUCCESS","message":"Simulation restarted."}')
+            return
+
+        elif parsed.path == "/api/hybrid/mode":
+            mode_val = q.get("mode", ["AUTO"])[0].upper()
+            if mode_val in ["AUTO", "NONE"]:
+                twin_runtime.mode_override = None
+            else:
+                try:
+                    twin_runtime.mode_override = HybridOperatingMode(mode_val)
+                except ValueError:
+                    pass
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            resp = {"status": "SUCCESS", "mode": mode_val}
+            self.wfile.write(json.dumps(resp).encode("utf-8"))
             return
 
         elif parsed.path == "/api/stream":

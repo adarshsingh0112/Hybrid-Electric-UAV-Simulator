@@ -1,0 +1,29 @@
+{
+  "battery_name": "DRDO-MALE-UAV-HV-Battery-18.5kWh",
+  "nominal_capacity_ah": 50.0,
+  "nominal_voltage_v": 370.0,
+  "min_voltage_v": 300.0,
+  "max_voltage_v": 420.0,
+  "nominal_internal_resistance_ohm": 0.08,
+  "max_discharge_current_a": 200.0,
+  "max_charge_current_a": 100.0,
+  "max_discharge_power_w": 65000.0,
+  "max_charge_power_w": 35000.0,
+  "charge_efficiency": 0.96,
+  "discharge_efficiency": 0.98,
+  "thermal_capacity_j_per_k": 45000.0,
+  "cooling_coefficient_w_per_k": 25.0,
+  "aging_resistance_factor": 0.5,
+  "initial_soc_pct": 100.0,
+  "initial_soh_pct": 100.0,
+  "initial_temp_c": 25.0,
+  "ocv_soc_curve": [
+    {"soc_pct": 0.0, "ocv_v": 300.0},
+    {"soc_pct": 10.0, "ocv_v": 335.0},
+    {"soc_pct": 20.0, "ocv_v": 350.0},
+    {"soc_pct": 50.0, "ocv_v": 370.0},
+    {"soc_pct": 80.0, "ocv_v": 390.0},
+    {"soc_pct": 90.0, "ocv_v": 405.0},
+    {"soc_pct": 100.0, "ocv_v": 420.0}
+  ]
+}

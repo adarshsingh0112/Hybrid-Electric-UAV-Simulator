@@ -4,7 +4,13 @@ Computes local feature importance rankings on normalized residual vectors in <20
 """
 from typing import Dict, List, Any, Tuple, Optional
 import numpy as np
-import torch
+
+try:
+    import torch
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+    torch = None
 
 from models.anomaly_autoencoder import RESIDUAL_CHANNELS
 from models.fault_classifier import FaultClassifierNet, FAULT_CLASSES, CLASS_TO_IDX
@@ -34,7 +40,7 @@ class FastSHAPExplainer:
     """
     def __init__(self, classifier_model: Optional[FaultClassifierNet] = None):
         self.classifier = classifier_model
-        self.device = torch.device("cpu")
+        self.device = torch.device("cpu") if HAS_TORCH else None
 
     def explain(
         self,
@@ -53,7 +59,7 @@ class FastSHAPExplainer:
         x_raw = np.array([residual_dict.get(ch, 0.0) for ch in RESIDUAL_CHANNELS], dtype=np.float32)
 
         # 1. Direct Gradient * Input Attribution (Integrated Gradients / Saliency proxy)
-        if self.classifier is not None:
+        if self.classifier is not None and HAS_TORCH:
             self.classifier.eval()
             x_t = torch.tensor(x_raw.reshape(1, -1), requires_grad=True, device=self.device)
             logits, _ = self.classifier(x_t)

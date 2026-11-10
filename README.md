@@ -72,6 +72,7 @@
 │   • Subsystem Health Matrix (Overall, Cylinders, Oil, Turbo, Vibration)     │
 │   • SHAP Root-Cause Evidence Drawer & Action Directives                     │
 │   • 1-Click Live Fault-Injection Control Pad for Stage Demonstration        │
+│   • Closed-Loop Mission Re-Routing & Pilot Confirmation Workflow (Tab 8)   │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -137,8 +138,14 @@ python test_simulation.py
 # Verify EKF, AI Models, RUL & SHAP XAI
 python test_ai_layer.py
 
-# Run Full Scientific Benchmark
-python validation/benchmark.py
+# Verify Step 10 Closed-Loop Re-Routing Suites
+python test_mission_rerouting_manager.py
+python test_operator_confirmation.py
+python test_mission_rerouting_api.py
+python test_mission_rerouting_integration.py
+
+# Run Master Consolidated Test Runner (22 Verification Suites)
+python run_all_tests.py
 ```
 
 ### Step 3: Launch Interactive Ground Station Dashboard

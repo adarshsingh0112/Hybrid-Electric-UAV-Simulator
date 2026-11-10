@@ -1,0 +1,68 @@
+{
+  "mission_name": "DRDO-MALE-UAV-Surveillance-Sortie-Alpha",
+  "waypoint_arrival_radius_m": 250.0,
+  "default_ground_speed_mps": 55.0,
+  "home_position": {
+    "latitude_deg": 18.5822,
+    "longitude_deg": 73.9197,
+    "altitude_m": 560.0
+  },
+  "waypoints": [
+    {
+      "waypoint_id": "WP-00",
+      "name": "Takeoff & Climb Out",
+      "latitude_deg": 18.6500,
+      "longitude_deg": 73.9500,
+      "altitude_m": 1500.0,
+      "priority": 1
+    },
+    {
+      "waypoint_id": "WP-01",
+      "name": "Enroute Climb Point",
+      "latitude_deg": 18.8000,
+      "longitude_deg": 74.1000,
+      "altitude_m": 5000.0,
+      "priority": 1
+    },
+    {
+      "waypoint_id": "WP-02",
+      "name": "High Alt Loiter Sector Alpha",
+      "latitude_deg": 19.1000,
+      "longitude_deg": 74.4000,
+      "altitude_m": 8686.8,
+      "priority": 2
+    },
+    {
+      "waypoint_id": "WP-03",
+      "name": "Surveillance Sector Bravo",
+      "latitude_deg": 19.4000,
+      "longitude_deg": 74.7000,
+      "altitude_m": 8686.8,
+      "priority": 2
+    },
+    {
+      "waypoint_id": "WP-04",
+      "name": "Recon Target Waypoint",
+      "latitude_deg": 19.6000,
+      "longitude_deg": 74.9000,
+      "altitude_m": 8686.8,
+      "priority": 3
+    },
+    {
+      "waypoint_id": "WP-05",
+      "name": "Return Descent Waypoint",
+      "latitude_deg": 18.9000,
+      "longitude_deg": 74.2000,
+      "altitude_m": 2000.0,
+      "priority": 1
+    },
+    {
+      "waypoint_id": "WP-06",
+      "name": "Base Touchdown & Recover",
+      "latitude_deg": 18.5822,
+      "longitude_deg": 73.9197,
+      "altitude_m": 560.0,
+      "priority": 1
+    }
+  ]
+}

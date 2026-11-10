@@ -1,0 +1,52 @@
+{
+  "policy_name": "DRDO-MALE-UAV-Fast-Forward-Monte-Carlo-v1",
+  "num_scenarios": 20,
+  "simulation_timestep_s": 2.0,
+  "max_simulation_duration_s": 7200.0,
+  "random_seed": 42,
+  "max_computation_budget_ms": 250.0,
+  "periodic_update_interval_s": 5.0,
+  "wind_uncertainty": {
+    "mean_speed_mps": 0.0,
+    "std_speed_mps": 4.0,
+    "max_speed_mps": 15.0,
+    "direction_distribution": "uniform"
+  },
+  "ambient_temp_uncertainty": {
+    "mean_delta_c": 0.0,
+    "std_delta_c": 2.5,
+    "min_delta_c": -8.0,
+    "max_delta_c": 8.0
+  },
+  "engine_degradation": {
+    "min_power_multiplier": 0.85,
+    "max_power_multiplier": 1.00,
+    "min_fuel_flow_multiplier": 1.00,
+    "max_fuel_flow_multiplier": 1.10
+  },
+  "battery_uncertainty": {
+    "min_resistance_multiplier": 0.95,
+    "max_resistance_multiplier": 1.30,
+    "max_initial_soc_offset_pct": 2.0
+  },
+  "power_demand_uncertainty": {
+    "min_multiplier": 0.95,
+    "max_multiplier": 1.08
+  },
+  "payload_mass_uncertainty": {
+    "base_uav_mass_kg": 1100.0,
+    "min_mass_delta_kg": -25.0,
+    "max_mass_delta_kg": 25.0
+  },
+  "safety_thresholds": {
+    "min_fuel_reserve_liters": 18.0,
+    "min_battery_reserve_pct": 20.0,
+    "critical_battery_temp_c": 65.0,
+    "critical_engine_cht_c": 220.0,
+    "max_permitted_power_deficit_w": 8000.0
+  },
+  "statistical_reporting": {
+    "percentiles": [5.0, 50.0, 95.0],
+    "confidence_level": 0.95
+  }
+}
